@@ -1,0 +1,126 @@
+
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:typed_data';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class SupabaseService {
+  static final SupabaseClient _client = Supabase.instance.client;
+
+  static Future<void> signUp(String email, String password) async {
+    await _client.auth.signUp(email: email, password: password);
+  }
+
+  static Future<void> signIn(String email, String password) async {
+    await _client.auth.signInWithPassword(email: email, password: password);
+  }
+
+  static Future<void> signOut() async {
+    await _client.auth.signOut();
+  }
+
+  
+static Future<String?> uploadImage(Uint8List bytes) async {
+  final user = _client.auth.currentUser;
+  if (user == null) throw Exception('User not authenticated');
+  final fileName = '${user.id}/${DateTime.now().toIso8601String()}.jpg';
+  try {
+    
+    final response = await _client.storage.from('items').uploadBinary(
+          fileName,
+          bytes,
+          fileOptions: const FileOptions(cacheControl: '3600'),
+        );
+    
+    if (response.isNotEmpty) {
+      final publicUrl = _client.storage.from('items').getPublicUrl(fileName);
+      
+      return publicUrl;
+    }
+    throw Exception('Upload response was empty');
+  } catch (e) {
+   
+    throw Exception('Failed to upload image: $e');
+  }
+}
+
+
+static Future<void> reportItem(Map<String, dynamic> data) async {
+  final user = _client.auth.currentUser;
+  if (user == null) throw Exception('User not authenticated');
+  try {
+    
+    final itemResponse = await _client.from('items').insert(data).select().single();
+    await _client.from('user_reports').insert({
+      'user_id': user.id,
+      'item_id': itemResponse['id'],
+      'type': data['type'],
+      'timestamp': data['timestamp'],
+    });
+    await _client.from('user_reports').insert({
+      'user_id': user.id,
+      'item_id': itemResponse['id'],
+      'type': data['type'],
+      'timestamp': data['timestamp'],
+    });
+  } catch (e) {
+    throw Exception('Failed to report item: $e');
+  }
+}
+
+  static Future<void> addComment(int itemId, String text) async {
+    final user = _client.auth.currentUser;
+    if (user == null) throw Exception('User not authenticated');
+    try {
+      await _client.from('comments').insert({
+        'item_id': itemId, 
+        'user_id': user.id,
+        'text': text,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      throw Exception('Failed to add comment: $e');
+    }
+  }
+
+  static Stream<List<Map<String, dynamic>>> getItemsStream(String filterType, String searchTerm) {
+    return _client
+        .from('items')
+        .stream(primaryKey: ['id'])
+        .order('timestamp', ascending: false)
+        .limit(20)
+        .map((data) => data.where((item) {
+              final type = item['type']?.toString() ?? '';
+              final name = item['name']?.toString() ?? '';
+              final matchesType = filterType == 'all' || type == filterType;
+              final matchesSearch = searchTerm.isEmpty || name.toLowerCase().contains(searchTerm.toLowerCase());
+              return matchesType && matchesSearch;
+            }).toList());
+  }
+
+  static Stream<List<Map<String, dynamic>>> getCommentsStream(int itemId) {
+    return _client
+        .from('comments')
+        .stream(primaryKey: ['id'])
+        .eq('item_id', itemId)
+        .order('timestamp', ascending: false);
+  }
+
+  static Future<void> cacheItems(List<Map<String, dynamic>> items) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('cached_items', items.toString());
+  }
+
+  static Future<String?> loadCachedItems() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('cached_items');
+  }
+
+  static Future<bool> isUserAuthenticated() async {
+    return _client.auth.currentSession != null;
+  }
+
+  static Future<String?> getCurrentUserId() async {
+    final user = _client.auth.currentUser;
+    return user?.id;
+  }
+}
