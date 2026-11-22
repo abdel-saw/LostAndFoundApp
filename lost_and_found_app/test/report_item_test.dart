@@ -29,19 +29,19 @@ void main() {
             'token_type': 'bearer', 'expires_in': 3600,
             'user': {'id': userId, 'app_metadata': {}, 'user_metadata': {},
               'aud': 'authenticated', 'created_at': '2026-01-01T00:00:00Z'},
-          }), 200, headers: {'content-type': 'application/json'});
+          }), 200, request: request, headers: {'content-type': 'application/json'});
         }
         requests.add(request);
         if (request.url.path == '/rest/v1/items') {
           return http.Response(jsonEncode(failItem
             ? {'message': 'item denied', 'code': '42501'}
             : {'id': 42, ...data}), failItem ? 403 : 201,
-            headers: {'content-type': 'application/json'});
+            request: request, headers: {'content-type': 'application/json'});
         }
         if (request.url.path == '/rest/v1/user_reports') {
           return http.Response(failReport
             ? '{"message":"report denied","code":"42501"}' : '',
-            failReport ? 403 : 201, headers: {'content-type': 'application/json'});
+            failReport ? 403 : 201, request: request, headers: {'content-type': 'application/json'});
         }
         throw StateError('Unexpected fixture request: ${request.url}');
       }));
