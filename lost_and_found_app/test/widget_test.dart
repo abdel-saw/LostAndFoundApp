@@ -1,30 +1,22 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:lost_and_found_app/screens/auth_wrapper.dart';
+import 'package:lost_and_found_app/screens/login_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget( AuthWrapper());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('empty login is rejected before requesting authentication', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: LoginScreen()));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Sign In'));
     await tester.pump();
+    expect(find.text('Please enter email and password'), findsOneWidget);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  testWidgets('sign-up mode can be opened and closed', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: LoginScreen()));
+    await tester.tap(find.text("Don't have an account? Sign Up"));
+    await tester.pump();
+    expect(find.widgetWithText(ElevatedButton, 'Sign Up'), findsOneWidget);
+    await tester.tap(find.text('Already have an account? Sign In'));
+    await tester.pump();
+    expect(find.widgetWithText(ElevatedButton, 'Sign In'), findsOneWidget);
   });
 }

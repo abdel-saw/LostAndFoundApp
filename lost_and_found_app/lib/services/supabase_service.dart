@@ -1,10 +1,11 @@
+import 'dart:convert';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SupabaseService {
-  static final SupabaseClient _client = Supabase.instance.client;
+  static SupabaseClient get _client => Supabase.instance.client;
 
   static Future<void> signUp(String email, String password) async {
     await _client.auth.signUp(email: email, password: password);
@@ -44,28 +45,8 @@ static Future<String?> uploadImage(Uint8List bytes) async {
 }
 
 
-static Future<void> reportItem(Map<String, dynamic> data) async {
-  final user = _client.auth.currentUser;
-  if (user == null) throw Exception('User not authenticated');
-  try {
-    
-    final itemResponse = await _client.from('items').insert(data).select().single();
-    await _client.from('user_reports').insert({
-      'user_id': user.id,
-      'item_id': itemResponse['id'],
-      'type': data['type'],
-      'timestamp': data['timestamp'],
-    });
-    await _client.from('user_reports').insert({
-      'user_id': user.id,
-      'item_id': itemResponse['id'],
-      'type': data['type'],
-      'timestamp': data['timestamp'],
-    });
-  } catch (e) {
-    throw Exception('Failed to report item: $e');
-  }
-}
+  static Future<void> reportItem(Map<String, dynamic> data) =>
+      ItemReportRepository(_client).reportItem(data);
 
   static Future<void> addComment(int itemId, String text) async {
     final user = _client.auth.currentUser;
@@ -107,12 +88,24 @@ static Future<void> reportItem(Map<String, dynamic> data) async {
 
   static Future<void> cacheItems(List<Map<String, dynamic>> items) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('cached_items', items.toString());
+    await prefs.setString('cached_items', jsonEncode(items));
   }
 
-  static Future<String?> loadCachedItems() async {
+  static Future<List<Map<String, dynamic>>> loadCachedItems() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('cached_items');
+    final cached = prefs.getString('cached_items');
+    if (cached == null) return [];
+    try {
+      final decoded = jsonDecode(cached);
+      if (decoded is! List || decoded.any((item) => item is! Map<String, dynamic>)) {
+        throw const FormatException('Invalid item cache');
+      }
+      return decoded.cast<Map<String, dynamic>>();
+    } on FormatException {
+      // Discard old Map.toString() caches and corrupt payloads.
+      await prefs.remove('cached_items');
+      return [];
+    }
   }
 
   static Future<bool> isUserAuthenticated() async {
@@ -123,4 +116,29 @@ static Future<void> reportItem(Map<String, dynamic> data) async {
     final user = _client.auth.currentUser;
     return user?.id;
   }
+}
+
+/// Persists a report using the authenticated client.
+/// These two requests are not yet a database transaction.
+class ItemReportRepository {
+  final SupabaseClient _client;
+  ItemReportRepository(this._client);
+
+Future<void> reportItem(Map<String, dynamic> data) async {
+  final user = _client.auth.currentUser;
+  if (user == null) throw Exception('User not authenticated');
+  try {
+    
+    final itemResponse = await _client.from('items').insert(data).select().single();
+    await _client.from('user_reports').insert({
+      'user_id': user.id,
+      'item_id': itemResponse['id'],
+      'type': data['type'],
+      'timestamp': data['timestamp'],
+    });
+  } catch (e) {
+    throw Exception('Failed to report item: $e');
+  }
+}
+
 }
