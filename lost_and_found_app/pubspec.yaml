@@ -40,6 +40,8 @@ dependencies:
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
+  integration_test:
+    sdk: flutter
   http: ^1.4.0
   flutter_test:
     sdk: flutter

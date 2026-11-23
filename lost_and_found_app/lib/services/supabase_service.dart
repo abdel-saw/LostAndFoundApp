@@ -20,16 +20,17 @@ class SupabaseService {
   }
 
   
-static Future<String?> uploadImage(Uint8List bytes) async {
+static Future<String?> uploadImage(Uint8List bytes, {String contentType = 'image/jpeg'}) async {
   final user = _client.auth.currentUser;
   if (user == null) throw Exception('User not authenticated');
-  final fileName = '${user.id}/${DateTime.now().toIso8601String()}.jpg';
+  final extension = contentType == 'image/png' ? 'png' : contentType == 'image/webp' ? 'webp' : 'jpg';
+  final fileName = '${user.id}/${DateTime.now().microsecondsSinceEpoch}.$extension';
   try {
     
     final response = await _client.storage.from('items').uploadBinary(
           fileName,
           bytes,
-          fileOptions: const FileOptions(cacheControl: '3600'),
+          fileOptions: FileOptions(cacheControl: '3600', contentType: contentType),
         );
     
     if (response.isNotEmpty) {

@@ -12,7 +12,7 @@ concurrency:
 jobs:
   database:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -29,6 +29,28 @@ jobs:
         run: supabase test db
       - name: Test Auth, REST and Storage APIs
         run: python3 scripts/test_supabase_api.py
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: stable
+          flutter-version: "3.29.3"
+          cache: true
+      - name: Resolve browser test dependencies
+        working-directory: lost_and_found_app
+        run: |
+          flutter pub get
+          python3 -c "import base64; from pathlib import Path; print('RESOLVED_LOCK=' + base64.b64encode(Path('pubspec.lock').read_bytes()).decode())"
+      - name: Install matched Chrome and ChromeDriver
+        id: chrome
+        uses: browser-actions/setup-chrome@ee1bab769ae8dffded59725025f3b8f9260da095
+        with:
+          chrome-version: stable
+          install-chromedriver: true
+      - name: Run browser workflow against local Supabase
+        env:
+          CHROME_EXECUTABLE: ${{ steps.chrome.outputs.chrome-path }}
+        run: |
+          "${{ steps.chrome.outputs.chromedriver-path }}" --port=4444 > "$RUNNER_TEMP/chromedriver.log" 2>&1 &
+          python3 scripts/run_browser_test.py
       - name: Stop local stack
         if: always()
         run: supabase stop --no-backup
