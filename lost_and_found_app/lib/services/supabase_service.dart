@@ -118,27 +118,27 @@ static Future<String?> uploadImage(Uint8List bytes) async {
   }
 }
 
-/// Persists a report using the authenticated client.
-/// These two requests are not yet a database transaction.
+/// Creates the item and linked report in one database transaction.
 class ItemReportRepository {
   final SupabaseClient _client;
   ItemReportRepository(this._client);
 
-Future<void> reportItem(Map<String, dynamic> data) async {
-  final user = _client.auth.currentUser;
-  if (user == null) throw Exception('User not authenticated');
-  try {
-    
-    final itemResponse = await _client.from('items').insert(data).select().single();
-    await _client.from('user_reports').insert({
-      'user_id': user.id,
-      'item_id': itemResponse['id'],
-      'type': data['type'],
-      'timestamp': data['timestamp'],
-    });
-  } catch (e) {
-    throw Exception('Failed to report item: $e');
+  Future<void> reportItem(Map<String, dynamic> data) async {
+    if (_client.auth.currentUser == null) {
+      throw Exception('User not authenticated');
+    }
+    try {
+      // Ownership and timestamp are supplied by the database, not the caller.
+      await _client.rpc('report_item', params: {
+        'payload': {
+          for (final key in [
+            'type', 'name', 'description', 'category', 'location', 'photo_url',
+          ])
+            if (data.containsKey(key)) key: data[key],
+        },
+      });
+    } catch (e) {
+      throw Exception('Failed to report item: $e');
+    }
   }
-}
-
 }
