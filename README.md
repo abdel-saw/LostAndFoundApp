@@ -55,11 +55,11 @@ flutter build web --release \
   --dart-define=SUPABASE_ANON_KEY=fixture-anon-key
 ```
 
-Les tests Flutter couvrent l'appel RPC avec un transport HTTP simulé, le cache JSON, la configuration et les interactions de connexion sans réseau. La CI Supabase exécute également les migrations, les tests SQL/RLS et des appels Auth/REST/Storage contre une pile locale jetable. La compilation Web utilise une configuration fictive et ne valide pas un service Supabase réel. Les erreurs et avertissements d'analyse bloquent la CI ; les remarques informatives restent visibles.
+Les tests Flutter couvrent l'appel RPC avec un transport HTTP simulé, le cache JSON, la configuration et les interactions de connexion sans réseau. La CI Supabase exécute également les migrations, les tests SQL/RLS, des appels Auth/REST/Storage et un parcours Chrome contre une pile locale jetable. Voir [les tests navigateur](docs/BROWSER_TESTING.md) pour le périmètre et les commandes. La compilation Web utilise une configuration fictive et ne valide pas un service Supabase réel. Les erreurs et avertissements d'analyse bloquent la CI ; les remarques informatives restent visibles.
 
 ## Prochaines étapes
 
-1. Vérifier le parcours complet dans un navigateur : connexion, photo, déclaration, commentaires et Realtime.
+1. Vérifier le dialogue de sélection de fichiers et le parcours sur le projet hébergé de développement.
 2. Préparer des données fictives et une configuration hébergée.
 3. Publier le client Web statique après cette validation.
 

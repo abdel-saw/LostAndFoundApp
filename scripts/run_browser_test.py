@@ -1,5 +1,6 @@
 """Run Flutter's Chrome integration test with disposable local credentials."""
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -12,6 +13,8 @@ subprocess.run([
     "flutter", "drive", "--driver=test_driver/integration_test.dart",
     "--target=integration_test/browser_flow_test.dart", "-d", "web-server",
     "--browser-name=chrome", "--headless", "--web-port=3000",
+    *(["--chrome-binary=" + os.environ["CHROME_EXECUTABLE"]]
+      if os.environ.get("CHROME_EXECUTABLE") else []),
     "--dart-define=SUPABASE_URL=" + url,
     "--dart-define=SUPABASE_ANON_KEY=" + config["ANON_KEY"],
 ], cwd=Path(__file__).resolve().parents[1] / "lost_and_found_app", check=True)

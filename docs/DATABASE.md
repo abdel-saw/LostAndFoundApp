@@ -41,8 +41,9 @@ signed URLs and client changes. The bucket enforces a 5 MiB upload limit;
 the current client does not inspect image contents or provide moderation.
 
 Items and comments are added to the Realtime publication. Row-level read
-policies apply to subscriptions. The tests check publication membership;
-browser subscription delivery still needs a manual check.
+policies apply to subscriptions. SQL tests check publication membership; the Chrome integration suite also
+checks live delivery from a second client. See [browser verification](BROWSER_TESTING.md).
+Hosted browser behavior still needs checking before publishing.
 
 ## Atomic reporting
 
