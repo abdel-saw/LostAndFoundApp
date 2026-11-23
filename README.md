@@ -57,6 +57,10 @@ flutter build web --release \
 
 Les tests Flutter couvrent l'appel RPC avec un transport HTTP simulé, le cache JSON, la configuration et les interactions de connexion sans réseau. La CI Supabase exécute également les migrations, les tests SQL/RLS, des appels Auth/REST/Storage et un parcours Chrome contre une pile locale jetable. Voir [les tests navigateur](docs/BROWSER_TESTING.md) pour le périmètre et les commandes. La compilation Web utilise une configuration fictive et ne valide pas un service Supabase réel. Les erreurs et avertissements d'analyse bloquent la CI ; les remarques informatives restent visibles.
 
+## Hébergement gratuit
+
+Le déploiement prévu utilise GitHub Pages pour le client et Supabase Free pour le backend. Le workflow compile le bon sous-chemin et utilise uniquement la configuration publique du projet. Consultez [la procédure complète](docs/HOSTING.md). La démo ne sera annoncée comme active qu'après configuration du backend et vérification du déploiement.
+
 ## Prochaines étapes
 
 1. Vérifier le dialogue de sélection de fichiers et le parcours sur le projet hébergé de développement.
