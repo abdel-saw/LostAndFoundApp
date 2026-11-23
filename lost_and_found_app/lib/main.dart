@@ -7,7 +7,7 @@ import 'config/supabase_config.dart';
 
 import 'screens/report_item_screen.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final config = SupabaseConfig.fromEnvironment();
   config.validate();
@@ -17,7 +17,7 @@ void main() async {
     initialRoute: '/',
     routes: {
       '/': (context) => AuthWrapper(),
-      '/report': (context) => ReportItemScreen(),
+      '/report': (context) => AuthWrapper(child: ReportItemScreen()),
     },
   ));
 }

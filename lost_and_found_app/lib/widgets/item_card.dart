@@ -1,82 +1,97 @@
-
-// ignore_for_file: use_key_in_widget_constructors, prefer_const_constructors_in_immutables, library_private_types_in_public_api, unused_field
-
 import 'package:flutter/material.dart';
 import 'package:lost_and_found_app/utils/extensions.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:lost_and_found_app/services/supabase_service.dart';
 
 class ItemCard extends StatefulWidget {
   final Map<String, dynamic> item;
-  final VoidCallback onComment;
-  final TextEditingController commentController;
-
-  ItemCard({required this.item, required this.onComment, required this.commentController});
+  const ItemCard({super.key, required this.item});
 
   @override
-  _ItemCardState createState() => _ItemCardState();
+  State<ItemCard> createState() => _ItemCardState();
 }
 
 class _ItemCardState extends State<ItemCard> {
-  bool _isExpanded = false;
+  final _commentController = TextEditingController();
+  late Stream<List<Map<String, dynamic>>> _comments;
+  bool _posting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadComments();
+  }
+
+  void _loadComments() {
+    _comments = SupabaseService.getCommentsStream(widget.item['id'] as int);
+  }
+
+  @override
+  void didUpdateWidget(covariant ItemCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item['id'] != widget.item['id']) _loadComments();
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addComment() async {
+    final text = _commentController.text.trim();
+    if (_posting || text.isEmpty) return;
+    setState(() => _posting = true);
+    try {
+      await SupabaseService.addComment(widget.item['id'] as int, text);
+      if (!mounted) return;
+      _commentController.clear();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _posting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final type = widget.item['type']?.toString() ?? 'Unknown';
+    final photo = widget.item['photo_url']?.toString() ?? '';
     return Card(
-      margin: EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       child: ExpansionTile(
         title: Text('${widget.item['name'] ?? 'Unnamed'} (${type.capitalize()})'),
         subtitle: Text('${widget.item['description'] ?? ''} - ${widget.item['location'] ?? ''}'),
-        trailing: widget.item['photo_url'] != ''
-            ? Image.network(widget.item['photo_url'], width: 50, fit: BoxFit.cover)
-            : null,
-        onExpansionChanged: (expanded) {
-          setState(() => _isExpanded = expanded);
-        },
+        trailing: photo.isEmpty ? null : Image.network(photo,
+          key: ValueKey('photo-${widget.item['id']}'), width: 50, height: 50,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stack) => const Icon(Icons.broken_image_outlined)),
         children: [
-          Padding(
-            padding: EdgeInsets.all(8),
-            child: Column(
-              children: [
-                StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: Supabase.instance.client
-                      .from('comments')
-                      .stream(primaryKey: ['id'])
-                      .eq('item_id', widget.item['id'])
-                      .order('timestamp', ascending: false),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return CircularProgressIndicator();
-                    }
-                    if (snapshot.hasError) {
-                      return Text('Error loading comments: ${snapshot.error}');
-                    }
-                    final comments = snapshot.data ?? [];
-                    if (comments.isEmpty) {
-                      return Text('No comments yet.');
-                    }
-                    return Column(
-                      children: comments
-                          .map((comment) => ListTile(
-                                title: Text(comment['text'] as String? ?? ''),
-                                subtitle: Text(comment['timestamp'] as String? ?? ''),
-                              ))
-                          .toList(),
-                    );
-                  },
-                ),
-                TextField(
-                  controller: widget.commentController,
-                  decoration: InputDecoration(labelText: 'Add Comment', border: OutlineInputBorder()),
-                  onSubmitted: (value) {
-                    if (value.isNotEmpty) {
-                      widget.onComment();
-                    }
-                  },
-                ),
-              ],
+          Padding(padding: const EdgeInsets.all(12), child: Column(children: [
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _comments,
+              builder: (context, snapshot) {
+                if (snapshot.hasError) return Text('Error loading comments: ${snapshot.error}');
+                if (!snapshot.hasData) return const CircularProgressIndicator();
+                final comments = snapshot.data!;
+                if (comments.isEmpty) return const Text('No comments yet.');
+                return Column(children: comments.map((comment) =>
+                  ListTile(title: Text(comment['text']?.toString() ?? ''))).toList());
+              },
             ),
-          ),
+            TextField(
+              key: ValueKey('comment-${widget.item['id']}'),
+              controller: _commentController, maxLength: 2000,
+              decoration: const InputDecoration(labelText: 'Add Comment', border: OutlineInputBorder()),
+              onSubmitted: (_) => _addComment(),
+            ),
+            TextButton(
+              key: ValueKey('post-comment-${widget.item['id']}'),
+              onPressed: _posting ? null : _addComment,
+              child: Text(_posting ? 'Posting…' : 'Post comment'),
+            ),
+          ])),
         ],
       ),
     );
