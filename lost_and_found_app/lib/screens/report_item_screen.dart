@@ -76,9 +76,10 @@ class _ReportItemScreenState extends State<ReportItemScreen> {
   }
 
   Future<void> _signOut() async {
+    final navigator = Navigator.of(context);
     try {
       await SupabaseService.signOut();
-      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+      if (navigator.mounted) navigator.popUntil((route) => route.isFirst);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));

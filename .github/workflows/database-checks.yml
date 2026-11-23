@@ -38,10 +38,9 @@ jobs:
         working-directory: lost_and_found_app
         run: |
           flutter pub get
-          python3 -c "import base64; from pathlib import Path; print('RESOLVED_LOCK=' + base64.b64encode(Path('pubspec.lock').read_bytes()).decode())"
       - name: Install matched Chrome and ChromeDriver
         id: chrome
-        uses: browser-actions/setup-chrome@ee1bab769ae8dffded59725025f3b8f9260da095
+        uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
         with:
           chrome-version: stable
           install-chromedriver: true

@@ -18,7 +18,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _items = SupabaseService.getItemsStream('all', '');
+    _items = SupabaseService.getItemsStream('all', '').asyncMap((items) async {
+      try {
+        await SupabaseService.cacheItems(items);
+      } catch (_) {
+        // Optional cache storage must not interrupt live item delivery.
+      }
+      return items;
+    });
   }
 
   @override
