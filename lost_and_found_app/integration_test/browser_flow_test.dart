@@ -73,7 +73,7 @@ void main() {
     final remote = SupabaseClient(
       const String.fromEnvironment('SUPABASE_URL'),
       const String.fromEnvironment('SUPABASE_ANON_KEY'),
-      authOptions: const AuthClientOptions(autoRefreshToken: false));
+      authOptions: const AuthClientOptions(autoRefreshToken: false, authFlowType: AuthFlowType.implicit));
     try {
       await remote.auth.signUp(email: 'remote-${DateTime.now().microsecondsSinceEpoch}@example.test',
         password: password);
