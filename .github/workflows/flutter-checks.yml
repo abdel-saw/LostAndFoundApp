@@ -25,11 +25,21 @@ jobs:
           channel: stable
           flutter-version: "3.29.3"
           cache: true
+      - name: Check hosted configuration guards
+        working-directory: .
+        run: python3 scripts/test_pages_config.py
       - name: Install dependencies
         run: flutter pub get
       - name: Analyze errors and warnings
         run: flutter analyze --no-fatal-infos
       - name: Run regression tests
         run: flutter test
-      - name: Compile web client with fixture configuration
-        run: flutter build web --release --dart-define=SUPABASE_URL=https://example.supabase.co --dart-define=SUPABASE_ANON_KEY=fixture-anon-key
+      - name: Compile the Pages build with public fixture configuration
+        working-directory: .
+        env:
+          SUPABASE_URL: https://fixture.supabase.co
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiYW5vbiJ9.Zml4dHVyZQ
+        run: |
+          python3 scripts/build_pages.py
+          python3 -c "from pathlib import Path; p=Path('lost_and_found_app/build/web'); assert '<base href=\"/LostAndFoundApp/\">' in (p/'index.html').read_text(); assert (p/'flutter_bootstrap.js').exists(); assert (p/'.nojekyll').exists()"
+
