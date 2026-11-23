@@ -8,7 +8,6 @@ import 'package:lost_and_found_app/services/supabase_service.dart';
 void main() {
   late SupabaseClient client;
   late List<http.Request> requests;
-  var failItem = false;
   var failReport = false;
   const userId = '11111111-1111-4111-8111-111111111111';
   final data = <String, dynamic>{
@@ -18,7 +17,6 @@ void main() {
 
   setUp(() {
     requests = [];
-    failItem = false;
     failReport = false;
     client = SupabaseClient('https://example.test', 'fixture-anon-key',
       authOptions: const AuthClientOptions(autoRefreshToken: false),
@@ -32,16 +30,11 @@ void main() {
           }), 200, request: request, headers: {'content-type': 'application/json'});
         }
         requests.add(request);
-        if (request.url.path == '/rest/v1/items') {
-          return http.Response(jsonEncode(failItem
-            ? {'message': 'item denied', 'code': '42501'}
-            : {'id': 42, ...data}), failItem ? 403 : 201,
-            request: request, headers: {'content-type': 'application/json'});
-        }
-        if (request.url.path == '/rest/v1/user_reports') {
+        if (request.url.path == '/rest/v1/rpc/report_item') {
           return http.Response(failReport
-            ? '{"message":"report denied","code":"42501"}' : '',
-            failReport ? 403 : 201, request: request, headers: {'content-type': 'application/json'});
+            ? '{"message":"report denied","code":"42501"}' : '42',
+            failReport ? 403 : 200, request: request,
+            headers: {'content-type': 'application/json'});
         }
         throw StateError('Unexpected fixture request: ${request.url}');
       }));
@@ -51,15 +44,13 @@ void main() {
   Future<void> signIn() => client.auth.signInWithPassword(
       email: 'fixture@example.test', password: 'fixture-password').then((_) {});
 
-  test('one submission creates one item and exactly one linked report', () async {
+  test('one submission makes one atomic RPC without client identity or time', () async {
     await signIn();
     await ItemReportRepository(client).reportItem(data);
-    expect(requests.map((r) => r.url.path),
-      ['/rest/v1/items', '/rest/v1/user_reports']);
-    expect(requests.every((r) => r.method == 'POST'), isTrue);
-    expect(jsonDecode(requests.last.body), {
-      'user_id': userId, 'item_id': 42, 'type': 'lost',
-      'timestamp': data['timestamp'],
+    expect(requests.map((r) => r.url.path), ['/rest/v1/rpc/report_item']);
+    expect(requests.single.method, 'POST');
+    expect(jsonDecode(requests.single.body), {
+      'payload': {'name': 'Keys', 'type': 'lost'},
     });
   });
 
@@ -68,17 +59,10 @@ void main() {
     expect(requests, isEmpty);
   });
 
-  test('failed item creation does not write a report', () async {
-    await signIn();
-    failItem = true;
-    await expectLater(ItemReportRepository(client).reportItem(data), throwsException);
-    expect(requests.map((r) => r.url.path), ['/rest/v1/items']);
-  });
-
-  test('report creation failure is propagated without retrying writes', () async {
+  test('RPC failure is propagated without falling back to separate writes', () async {
     await signIn();
     failReport = true;
     await expectLater(ItemReportRepository(client).reportItem(data), throwsException);
-    expect(requests.length, 2);
+    expect(requests.map((r) => r.url.path), ['/rest/v1/rpc/report_item']);
   });
 }

@@ -41,7 +41,9 @@ Les paramètres sont lus avec `String.fromEnvironment`. Un fichier `.env` n'est 
 
 La clé anon/publique est visible dans une application compilée. N'utilisez jamais de clé `service_role` ou secrète côté client. Les règles RLS et Storage doivent contrôler les accès.
 
-**Limite de reproductibilité :** les migrations SQL et les politiques du projet Supabase d'origine ne sont pas encore versionnées. Cette commande ne crée pas la base. Utilisez une base de développement compatible ; le prochain travail est de fournir un schéma et des politiques testés avant toute publication.
+Le schéma et les politiques sont versionnés dans `supabase/migrations/`. Depuis la racine du dépôt, lancez `supabase start` (Docker et CLI Supabase 3.3.0), puis utilisez l'URL et la clé anon locales affichées. Configurez un port Web fixe avec `flutter run -d chrome --web-port=3000` et les deux `--dart-define`.
+
+Consultez [la configuration de la base](docs/DATABASE.md) pour les droits, les tests et la procédure sur un **nouveau** projet Supabase. Cette migration constitue une nouvelle base, pas une conversion du projet historique.
 
 ## Vérification
 
@@ -53,14 +55,15 @@ flutter build web --release \
   --dart-define=SUPABASE_ANON_KEY=fixture-anon-key
 ```
 
-Les tests couvrent les écritures de déclaration via le vrai client Supabase avec un transport HTTP simulé, le cache JSON, la configuration et les interactions de connexion sans réseau. La compilation Web utilise une configuration fictive et ne valide pas un service Supabase réel. Les erreurs et avertissements d'analyse bloquent la CI ; les remarques informatives restent visibles.
+Les tests Flutter couvrent l'appel RPC avec un transport HTTP simulé, le cache JSON, la configuration et les interactions de connexion sans réseau. La CI Supabase exécute également les migrations, les tests SQL/RLS et des appels Auth/REST/Storage contre une pile locale jetable. La compilation Web utilise une configuration fictive et ne valide pas un service Supabase réel. Les erreurs et avertissements d'analyse bloquent la CI ; les remarques informatives restent visibles.
 
 ## Prochaines étapes
 
-1. Versionner le schéma SQL, les politiques RLS/Storage et leurs tests.
-2. Créer l'objet et son rapport dans une même transaction SQL. La correction du doublon conserve actuellement deux requêtes : un échec de la seconde peut laisser un objet sans rapport.
-3. Vérifier inscription, connexion, photo, déclaration, commentaires et Realtime sur une base de développement.
-4. Publier le client Web statique avec des données fictives après cette validation.
+1. Vérifier le parcours complet dans un navigateur : connexion, photo, déclaration, commentaires et Realtime.
+2. Préparer des données fictives et une configuration hébergée.
+3. Publier le client Web statique après cette validation.
+
+La création utilise maintenant `report_item` : objet et rapport sont enregistrés dans une même transaction. L'identité et l'heure sont fixées côté serveur. Les tests SQL provoquent un échec de la seconde écriture pour vérifier le rollback.
 
 Les notifications, profils de contact, géolocalisation, recherche par lieu et pagination au-delà des 20 objets ne sont pas implémentés.
 
