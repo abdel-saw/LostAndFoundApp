@@ -24,6 +24,18 @@ In Auth URL Configuration set:
 - Site URL: `https://abdel-saw.github.io/LostAndFoundApp/`
 - Allowed redirect URL: `https://abdel-saw.github.io/LostAndFoundApp/`
 
+The web client explicitly passes its app directory as `emailRedirectTo` during
+signup, retaining `/LostAndFoundApp/` and omitting hash routes/query parameters.
+Both URLs above must match that directory exactly, including the trailing slash.
+The confirmation email template should link to `{{ .ConfirmationURL }}` so
+Supabase verifies the email before returning to the app. A bare link to
+`{{ .SiteURL }}` or `{{ .RedirectTo }}` does not perform verification.
+
+After changing redirects, test a **new** signup and its newly generated email.
+Previously sent links retain their original redirect target. If verification
+succeeds but the browser lands at the GitHub account root, the account can still
+sign in at the project URL; the return navigation is the remaining issue.
+
 Keep any temporary localhost redirect only if you use it for development.
 The client uses hash routes, such as `/LostAndFoundApp/#/report`, so refreshes
 do not require a server-side rewrite.

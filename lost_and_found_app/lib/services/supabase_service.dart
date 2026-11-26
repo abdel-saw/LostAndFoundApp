@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+import 'package:lost_and_found_app/config/auth_redirect.dart';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,7 +11,11 @@ class SupabaseService {
   static SupabaseClient get _client => Supabase.instance.client;
 
   static Future<void> signUp(String email, String password) async {
-    await _client.auth.signUp(email: email, password: password);
+    await _client.auth.signUp(
+      email: email,
+      password: password,
+      emailRedirectTo: signupRedirectUrl(isWeb: kIsWeb, appUrl: Uri.base),
+    );
   }
 
   static Future<void> signIn(String email, String password) async {
